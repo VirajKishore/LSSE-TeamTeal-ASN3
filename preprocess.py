@@ -13,8 +13,6 @@ from dash.dependencies import Input, Output, State, ALL
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 
-
-
 # ---------------------------------------------------------
 # 1. Data Loading (Feature Releases)
 # ---------------------------------------------------------
@@ -92,17 +90,14 @@ def aggregate_week(df_week):
     neutral_count = (df_week["score"] == 3).sum()
     bad_count = (df_week["score"] <= 2).sum()
     avg_score = df_week["score"].mean()
-
     content_all = " ".join(df_week["content"].dropna().astype(str))
     content_good = " ".join(df_week.loc[df_week["score"] >= 4, "content"].dropna().astype(str))
     content_neutral = " ".join(df_week.loc[df_week["score"] == 3, "content"].dropna().astype(str))
     content_bad = " ".join(df_week.loc[df_week["score"] <= 2, "content"].dropna().astype(str))
-
     top_all = get_top_keywords(content_all, n=10, category="all")
     top_good = get_top_keywords(content_good, n=10, category="good")
     top_neutral = get_top_keywords(content_neutral, n=10, category="neutral")
     top_bad = get_top_keywords(content_bad, n=10, category="bad")
-
     return pd.Series({
         "good": good_count,
         "neutral": neutral_count,
@@ -143,25 +138,21 @@ def aggregate_reviews_for_discrete_weeks(selected_year, monthly=False, selected_
         return pd.DataFrame(), num_weeks
     df_rev["Monday"] = df_rev["at"].dt.date - pd.to_timedelta(df_rev["at"].dt.weekday, unit="D")
     grouped = df_rev.groupby("Monday").apply(aggregate_week).reset_index()
-
     def monday_to_week(monday_date):
         delta = (monday_date - cal_start).days
         return delta // 7 + 1
-
     grouped["x_week"] = grouped["Monday"].apply(monday_to_week)
     return grouped, num_weeks
 
 # ---------------------------------------------------------
-# 5. Discrete Calendar Heatmap & Reviews Chart
+# 5. Discrete Calendar Heatmap & Reviews Chart Functions
 # ---------------------------------------------------------
 def generate_discrete_calendar_heatmap(selected_year, release_range, monthly=False, selected_month=None):
     day_map = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     d_start, d_end, cal_start, cal_end, total_days, num_weeks, all_dates = get_discrete_weeks_for_year(selected_year, monthly, selected_month)
-
     z = np.full((7, num_weeks), 0.0)
     day_matrix = np.full((7, num_weeks), '', dtype=object)
     custom_data = np.full((7, num_weeks), '', dtype=object)
-
     for i, current_date in enumerate(all_dates):
         week_idx = i // 7
         day_idx = current_date.weekday()
@@ -175,7 +166,6 @@ def generate_discrete_calendar_heatmap(selected_year, release_range, monthly=Fal
             z[day_idx, week_idx] = cnt
         else:
             z[day_idx, week_idx] = np.nan
-
     heatmap_trace = go.Heatmap(
         z=z,
         x=list(range(1, num_weeks+1)),
@@ -201,7 +191,6 @@ def generate_discrete_calendar_heatmap(selected_year, release_range, monthly=Fal
         ygap=3,
         name="Daily Releases"
     )
-
     # Month labels
     months_x, months_y, months_text, months_customdata = [], [], [], []
     for m in range(1, 13):
@@ -219,7 +208,6 @@ def generate_discrete_calendar_heatmap(selected_year, release_range, monthly=Fal
         months_y.append(y_val)
         months_text.append(first_day_of_month.strftime("%b"))
         months_customdata.append(m)
-
     month_label_trace = go.Scatter(
         x=months_x,
         y=months_y,
@@ -231,11 +219,9 @@ def generate_discrete_calendar_heatmap(selected_year, release_range, monthly=Fal
         name="Month Labels",
         textfont=dict(size=14, color="black")
     )
-
     title_str = f"Feature Releases Calendar Heat Map - {selected_year}"
     if monthly:
         title_str += f" (Month {selected_month})"
-
     fig = go.Figure(data=[heatmap_trace, month_label_trace])
     fig.update_layout(
         title=title_str,
@@ -263,35 +249,44 @@ def generate_discrete_reviews_linechart(selected_year, monthly=False, selected_m
             height=300
         )
         return fig
-
     fig = go.Figure()
+    # Amazing Colors for the lines and markers
     fig.add_trace(go.Scatter(
         x=agg["x_week"], y=agg["good"],
         mode="lines+markers", name="Good Reviews",
         customdata=agg["top_good"],
-        hovertemplate="Week %{x}<br>Good Reviews: %{y}<br>Top Words: %{customdata}<extra></extra>"
+        hovertemplate="Week %{x}<br>Good Reviews: %{y}<br>Top Words: %{customdata}<extra></extra>",
+        line=dict(color="#28a745"),
+        marker=dict(color="#28a745")
     ))
     fig.add_trace(go.Scatter(
         x=agg["x_week"], y=agg["neutral"],
         mode="lines+markers", name="Neutral Reviews",
         customdata=agg["top_neutral"],
-        hovertemplate="Week %{x}<br>Neutral Reviews: %{y}<br>Top Words: %{customdata}<extra></extra>"
+        hovertemplate="Week %{x}<br>Neutral Reviews: %{y}<br>Top Words: %{customdata}<extra></extra>",
+        line=dict(color="#fd7e14"),
+        marker=dict(color="#fd7e14")
     ))
     fig.add_trace(go.Scatter(
         x=agg["x_week"], y=agg["bad"],
         mode="lines+markers", name="Bad Reviews",
         customdata=agg["top_bad"],
-        hovertemplate="Week %{x}<br>Bad Reviews: %{y}<br>Top Words: %{customdata}<extra></extra>"
+        hovertemplate="Week %{x}<br>Bad Reviews: %{y}<br>Top Words: %{customdata}<extra></extra>",
+        line=dict(color="#dc3545"),
+        marker=dict(color="#dc3545")
     ))
     fig.add_trace(go.Scatter(
         x=agg["x_week"], y=agg["average"],
         mode="lines+markers", name="Average Score", yaxis="y2",
         customdata=agg["top_all"],
-        hovertemplate="Week %{x}<br>Average Score: %{y:.2f}<br>Top Words: %{customdata}<extra></extra>"
+        hovertemplate="Week %{x}<br>Average Score: %{y:.2f}<br>Top Words: %{customdata}<extra></extra>",
+        line=dict(color="#007bff"),
+        marker=dict(color="#007bff")
     ))
-
     fig.update_layout(
         title=f"Weekly Reviews - {selected_year}",
+        dragmode="zoom",
+        hovermode="closest",
         xaxis=dict(
             title="Discrete Week Index",
             tickmode="array",
@@ -317,19 +312,29 @@ def generate_two_discrete_graphs(selected_year, view_type, selected_month, relea
     return reviews_fig, calendar_fig
 
 # ---------------------------------------------------------
-# 6. Main App Layout (Two-Row Controls + Two Equal-Width Data Divs)
+# 6. Main App Layout (with Floating Help Button & Modal)
 # ---------------------------------------------------------
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server 
-app.title = "Discrete Weeks Calendar & Reviews"
+app.title = "Firefox Update & Review Dashboard"
+server = app.server  # Expose the WSGI server
+
+# Inject custom CSS to override the default cursor using a dcc.Markdown with dangerously_allow_html enabled
+custom_css = dcc.Markdown('''
+<style>
+    .js-plotly-plot .main-svg {
+        cursor: pointer !important;
+    }
+</style>
+''', dangerously_allow_html=True)
 
 app.layout = dbc.Container(fluid=True, children=[
-    # Title
+    custom_css,
+    # Title Row
     dbc.Row([
         dbc.Col(
             dbc.Card(
                 dbc.CardBody(
-                    html.H1("Discrete Weeks Calendar & Reviews", className="text-center mb-0")
+                    html.H1("Firefox Update & Review Dashboard", className="text-center mb-0")
                 ),
                 className="my-4 shadow border-0",
                 style={"borderRadius": "15px"}
@@ -337,54 +342,49 @@ app.layout = dbc.Container(fluid=True, children=[
             width=12
         )
     ]),
-    # Controls Row #1
+    # Controls Row #1: Year, View, Filter, Reset
     dbc.Row([
-    dbc.Col([
-        html.Label("Select a Year:", className="fw-bold mb-1"),
-        dcc.Dropdown(
-            id="year-dropdown",
-            options=[{"label": str(y), "value": y} for y in years],
-            value=years[0],
-            clearable=False,
-            style={"width": "100%"}
-        )
-    ], xs=12, sm=6, md=3),
-
-    dbc.Col([
-        html.Label("View:", className="fw-bold mb-1"),
-        dcc.RadioItems(
-            id="view-type",
-            options=[
-                {"label": "Yearly", "value": "yearly"},
-                {"label": "Monthly", "value": "monthly"}
-            ],
-            value="yearly",
-            labelStyle={"display": "inline-block", "marginRight": "15px"},
-            inputStyle={"marginRight": "5px"}
-        )
-    ], xs=12, sm=6, md=3),
-
-    dbc.Col([
-        html.Label("Filter by Release Count:", className="fw-bold mb-1"),
-        dcc.RangeSlider(
-            id="release-range",
-            min=0,
-            max=global_max,
-            step=1,
-            value=[0, global_max],
-            tooltip={"placement": "bottom"},
-            marks={i: str(i) for i in range(0, global_max + 1)}
-        )
-    ], xs=12, md=4),
-
-    dbc.Col([
-        html.Label(" ", className="mb-1"),  # spacer label
-        dbc.Button("Reset", id="reset-button", color="secondary", n_clicks=0, className="w-100")
-    ], xs=12, md=2)
-], className="g-3 mb-4"),
-
-
-    # Controls Row #2 (Month dropdown)
+        dbc.Col([
+            html.Label("Select a Year:", className="fw-bold mb-1"),
+            dcc.Dropdown(
+                id="year-dropdown",
+                options=[{"label": str(y), "value": y} for y in years],
+                value=years[0],
+                clearable=False,
+                style={"width": "100%"}
+            )
+        ], xs=12, sm=6, md=3),
+        dbc.Col([
+            html.Label("View:", className="fw-bold mb-1"),
+            dcc.RadioItems(
+                id="view-type",
+                options=[
+                    {"label": "Yearly", "value": "yearly"},
+                    {"label": "Monthly", "value": "monthly"}
+                ],
+                value="yearly",
+                labelStyle={"display": "inline-block", "marginRight": "15px"},
+                inputStyle={"marginRight": "5px"}
+            )
+        ], xs=12, sm=6, md=3),
+        dbc.Col([
+            html.Label("Filter by Release Count:", className="fw-bold mb-1"),
+            dcc.RangeSlider(
+                id="release-range",
+                min=0,
+                max=global_max,
+                step=1,
+                value=[0, global_max],
+                tooltip={"placement": "bottom"},
+                marks={i: str(i) for i in range(0, global_max + 1)}
+            )
+        ], xs=12, md=4),
+        dbc.Col([
+            html.Label(" ", className="mb-1"),
+            dbc.Button("Reset", id="reset-button", color="secondary", n_clicks=0, className="w-100")
+        ], xs=12, md=2)
+    ], className="g-3 mb-4"),
+    # Controls Row #2: Month Dropdown (conditionally visible)
     dbc.Row([
         dbc.Col(
             html.Div(
@@ -417,7 +417,6 @@ app.layout = dbc.Container(fluid=True, children=[
             md=12
         )
     ], className="mb-3"),
-
     # Reviews Graph
     dbc.Row([
         dbc.Col(
@@ -426,7 +425,7 @@ app.layout = dbc.Container(fluid=True, children=[
                     dcc.Graph(
                         id="reviews-graph",
                         config={"displayModeBar": False},
-                        style={"width": "100%"}
+                        style={"width": "100%", "cursor": "pointer"}
                     )
                 ),
                 className="mb-4 shadow border-0",
@@ -443,7 +442,7 @@ app.layout = dbc.Container(fluid=True, children=[
                     dcc.Graph(
                         id="calendar-graph",
                         config={"displayModeBar": False},
-                        style={"width": "100%"}
+                        style={"width": "100%", "cursor": "pointer"}
                     )
                 ),
                 className="mb-4 shadow border-0",
@@ -452,8 +451,7 @@ app.layout = dbc.Container(fluid=True, children=[
             width=12
         )
     ]),
-
-    # Two equal-width columns for software releases & keywords/review expansions
+    # Lower Section: Two equal-width columns for Software Releases & Keywords/Reviews
     dbc.Row([
         dbc.Col(
             dbc.Card(
@@ -480,8 +478,83 @@ app.layout = dbc.Container(fluid=True, children=[
             md=6, sm=12, xs=12
         )
     ]),
-
-    # Hidden store
+    # --- Floating Help Button (fixed at bottom right)
+    html.Div(
+        dbc.Button("?", 
+                   id="help-button", 
+                   color="primary", 
+                   className="rounded-circle", 
+                   style={
+                       "position": "fixed", 
+                       "bottom": "20px", 
+                       "right": "20px", 
+                       "width": "50px", 
+                       "height": "50px", 
+                       "fontSize": "24px", 
+                       "padding": "0px",
+                       "zIndex": "1000",
+                       "cursor": "pointer"
+                   }
+        )
+    ),
+    # --- Instructions Modal
+    dbc.Modal(
+        [
+            dbc.ModalHeader("Firefox Update & Review Dashboard - Instructions"),
+            dbc.ModalBody(
+                html.Div(
+                    [
+                        html.P("Welcome to the Firefox Update & Review Dashboard!"),
+                        html.P("This application visualizes Firefox software releases along with user reviews to help you understand how updates impact user sentiment."),
+                        html.P([
+                            html.Strong("Data & Views:"),
+                            html.Br(),
+                            "• The Feature Releases data shows when Firefox updates were rolled out.",
+                            html.Br(),
+                            "• The User Reviews data is aggregated weekly and categorized as Good, Neutral, or Bad with an average score.",
+                            html.Br(),
+                            "• The Calendar Heatmap displays daily release counts.",
+                            html.Br(),
+                            "• The lower panels display detailed release information (left) and extracted top keywords with review samples (right)."
+                        ]),
+                        html.P([
+                            html.Strong("How to Use:"),
+                            html.Br(),
+                            "1. ", html.Strong("Filters & Controls:"), html.Br(),
+                            "   - Select the desired year using the Year dropdown.",
+                            html.Br(),
+                            "   - Toggle between 'Yearly' and 'Monthly' views.",
+                            html.Br(),
+                            "   - Adjust the Release Count slider to filter which feature releases are shown.",
+                            html.Br(),
+                            "   - Click 'Reset' to clear selections (this resets all selections except the Year and Month).",
+                            html.Br(),
+                            html.Br(),
+                            "2. ", html.Strong("Interactive Charts:"), html.Br(),
+                            "   - The top review chart shows aggregated review statistics per week. Click on a week’s data point to display all software releases for that entire week in the left panel.",
+                            html.Br(),
+                            "   - The calendar heatmap displays daily release counts; clicking a day shows that day’s releases.",
+                            html.Br(),
+                            "   - In the right panel, top keywords (extracted from user reviews) are shown as buttons. Click a keyword to view sample reviews containing that word.",
+                            html.Br(),
+                            html.Br(),
+                            "3. ", html.Strong("Additional Interactivity:"), html.Br(),
+                            "   - Hover over the charts for further insights. Look for the pointer cursor to know the charts are clickable."
+                        ]),
+                        html.P("Enjoy exploring the dashboard!")
+                    ],
+                    style={"whiteSpace": "pre-wrap", "lineHeight": "1.5"}
+                )
+            ),
+            dbc.ModalFooter(
+                dbc.Button("Close", id="close-help-modal", className="ml-auto")
+            ),
+        ],
+        id="help-modal",
+        is_open=False,
+        size="lg"
+    ),
+    # Hidden store for selected review info
     dcc.Store(id="selected-review-store")
 ], style={"backgroundColor": "#f8f9fa", "padding": "20px"})
 
@@ -511,14 +584,14 @@ def toggle_month_dropdown(view_type):
 )
 def update_main_graphs(revClick, calClick, selected_year, view_type, selected_month, release_range, reset_clicks):
     monthly_flag = (view_type == "monthly")
+    triggered_props = callback_context.triggered
+    if triggered_props and "reset-button" in triggered_props[0]["prop_id"]:
+        revClick = None
+        calClick = None
     reviews_fig, calendar_fig = generate_two_discrete_graphs(selected_year, view_type, selected_month, release_range)
-
     day_details = "Click on a day tile to see feature updates."
-    triggered = callback_context.triggered
-    if triggered:
-        source = triggered[0]["prop_id"].split(".")[0]
-
-        # If the reviews graph is clicked => show releases for the entire week
+    if triggered_props:
+        source = triggered_props[0]["prop_id"].split(".")[0]
         if source == "reviews-graph" and revClick:
             week = revClick["points"][0]["x"]
             d_start, d_end, cal_start, cal_end, total_days, num_weeks, _ = get_discrete_weeks_for_year(selected_year, monthly_flag, selected_month)
@@ -533,8 +606,6 @@ def update_main_graphs(revClick, calClick, selected_year, view_type, selected_mo
                     html.H5(f"Software Releases for Week {week} ({monday_date} to {sunday_date}):", className="mb-2"),
                     html.Ul(items, style={"marginLeft": "20px", "textAlign": "left"})
                 ])
-
-        # If the calendar is clicked => show releases for that specific day
         elif source == "calendar-graph" and calClick:
             date_str = calClick["points"][0].get("customdata", "")
             if date_str:
@@ -551,7 +622,6 @@ def update_main_graphs(revClick, calClick, selected_year, view_type, selected_mo
                         html.H5(f"Software Releases on {clicked_date.strftime('%b %d, %Y')}:", className="mb-2"),
                         html.Ul(items, style={"marginLeft": "20px", "textAlign": "left"})
                     ])
-
     return reviews_fig, calendar_fig, day_details
 
 @app.callback(
@@ -567,7 +637,7 @@ def update_selected_review_store(revClick, selected_year, view_type, selected_mo
     point = revClick["points"][0]
     week = point["x"]
     curve_num = point["curveNumber"]
-    cat_map = {0:"good", 1:"neutral", 2:"bad", 3:"all"}
+    cat_map = {0: "good", 1: "neutral", 2: "bad", 3: "all"}
     category = cat_map.get(curve_num, "good")
     monthly_flag = (view_type == "monthly")
     agg, _ = aggregate_reviews_for_discrete_weeks(selected_year, monthly_flag, selected_month)
@@ -602,11 +672,8 @@ def update_keywords_div(data):
     words = [w.strip() for w in keywords_str.split(",") if w.strip()]
     if not words:
         return html.Div("No keywords found for this category/week.")
-
-    buttons = [
-        dbc.Button(word, id={"type": "keyword-btn", "index": word}, color="info", className="m-1")
-        for word in words
-    ]
+    buttons = [dbc.Button(word, id={"type": "keyword-btn", "index": word}, color="info", className="m-1")
+               for word in words]
     return html.Div([
         html.H6(f"Top {len(words)} Keywords for Week {data.get('week')} ({data.get('category').capitalize()} Reviews):"),
         html.Div(buttons, style={"display": "flex", "flexWrap": "wrap"})
@@ -627,11 +694,9 @@ def show_keyword_reviews(n_clicks_list, store_data):
         return ""
     button_id = json.loads(triggered["prop_id"].split(".")[0])
     clicked_keyword = button_id["index"]
-
     selected_week = store_data["week"]
     selected_year = store_data["year"]
     category = store_data["category"]
-
     d_start, d_end, cal_start, cal_end, total_days, num_weeks, _ = get_discrete_weeks_for_year(selected_year)
     monday_date = cal_start + timedelta(weeks=selected_week - 1)
     week_end = monday_date + timedelta(days=6)
@@ -642,24 +707,31 @@ def show_keyword_reviews(n_clicks_list, store_data):
         df_week = df_week[df_week["score"] == 3]
     elif category == "bad":
         df_week = df_week[df_week["score"] <= 2]
-
     mask = df_week["content"].str.lower().str.contains(clicked_keyword.lower(), na=False)
     df_filtered = df_week[mask]
     if df_filtered.empty:
         return dbc.Alert(f"No reviews found containing '{clicked_keyword}' in week {selected_week}.", color="warning")
-
     reviews_list = df_filtered["content"].head(5).tolist()
     return html.Div([
         html.H6(f"Reviews containing '{clicked_keyword}' in week {selected_week}:"),
         html.Ul([html.Li(review) for review in reviews_list], style={"maxHeight": "200px", "overflowY": "auto"})
     ])
 
-# ---------------------------------------------------------
-# 7. Run the App
-# ---------------------------------------------------------
+# Floating Help Button and Modal Callback
+@app.callback(
+    Output("help-modal", "is_open"),
+    [Input("help-button", "n_clicks"), Input("close-help-modal", "n_clicks")],
+    [State("help-modal", "is_open")]
+)
+def toggle_help_modal(n_open, n_close, is_open):
+    if n_open or n_close:
+        return not is_open
+    return is_open
 
+# ---------------------------------------------------------
+# 8. Run the App
+# ---------------------------------------------------------
+server = app.server  # Expose the WSGI server
 
 if __name__ == "__main__":
     app.run_server(debug=False)
-
-
