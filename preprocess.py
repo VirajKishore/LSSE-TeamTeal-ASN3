@@ -654,5 +654,9 @@ def show_keyword_reviews(n_clicks_list, store_data):
 # ---------------------------------------------------------
 # 7. Run the App
 # ---------------------------------------------------------
+
+server = app.server  # ✅ expose the WSGI server for Gunicorn
+
 if __name__ == "__main__":
-    app.run()
+    app.run_server()
+
