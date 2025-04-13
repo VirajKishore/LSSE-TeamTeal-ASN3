@@ -13,7 +13,7 @@ from dash.dependencies import Input, Output, State, ALL
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 
-app = dash.Dash(__name__, external_stylesheets=[...])
+
 
 # ---------------------------------------------------------
 # 1. Data Loading (Feature Releases)
@@ -320,6 +320,7 @@ def generate_two_discrete_graphs(selected_year, view_type, selected_month, relea
 # 6. Main App Layout (Two-Row Controls + Two Equal-Width Data Divs)
 # ---------------------------------------------------------
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server 
 app.title = "Discrete Weeks Calendar & Reviews"
 
 app.layout = dbc.Container(fluid=True, children=[
@@ -657,8 +658,6 @@ def show_keyword_reviews(n_clicks_list, store_data):
 # 7. Run the App
 # ---------------------------------------------------------
 
-
-server = app.server  # ← MUST be included!
 
 if __name__ == "__main__":
     app.run_server(debug=False)
