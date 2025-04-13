@@ -661,5 +661,6 @@ def show_keyword_reviews(n_clicks_list, store_data):
 server = app.server  # ← MUST be included!
 
 if __name__ == "__main__":
-    app.run_server()
+    app.run_server(debug=False)
+
 
