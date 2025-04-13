@@ -1,1 +1,1 @@
-web: gunicorn preprocess:app
+web: gunicorn preprocess:server
